@@ -1,0 +1,92 @@
+package hw4.hcompute;
+
+import hw4.Constants;
+import hw4.plain.Record;
+import hw4.plain.RecordKey;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.hbase.mapreduce.TableMapper;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+public class HCompute {
+
+	public static class HComputeMapper extends TableMapper<RecordKey, Record> {
+
+		public void map(ImmutableBytesWritable row, Result value,
+				Context context) throws IOException, InterruptedException {
+		}
+	}
+
+	public static class HComputeReducer extends
+			Reducer<RecordKey, Record, Text, Text> {
+		private Text k = new Text();
+
+		public void reduce(RecordKey key, Iterable<Record> values,
+				Context context) throws IOException, InterruptedException {
+			float arr[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			long count[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+			for (Record r : values) {
+				arr[r.getFlightMonth() - 1] = arr[r.getFlightMonth() - 1]
+						+ r.getArrDelayMinSum();
+				count[r.getFlightMonth() - 1] = count[r.getFlightMonth() - 1]
+						+ r.getArrDelayMinCount();
+			}
+			String c = key.getAirLineName();
+			for (int i = 0; i < arr.length; i++) {
+				int avg = Math.round(arr[i] / count[i]);
+				// float avg = arr[i] / count[i];
+				c = c.concat(",(").concat(String.valueOf(i + 1)).concat(",")
+						.concat(String.valueOf(avg)).concat(")");
+			}
+			k.set(c);
+			context.write(null, k);
+		}
+	}
+
+	public static void main(String[] args) throws IOException {
+		Configuration config = HBaseConfiguration.create();
+
+		String[] otherArgs = new GenericOptionsParser(config, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: flight delay avg <out>");
+			System.exit(2);
+		}
+		Job job = new Job(config, "ExampleSummaryToFile");
+		job.setJarByClass(HCompute.class);
+
+		Scan scan = new Scan();
+		scan.setCaching(500);
+		scan.setCacheBlocks(false);
+
+		TableMapReduceUtil.initTableMapperJob(Constants.TBL_NAME, // input table
+				scan, // Scan instance to control CF and attribute selection
+				HComputeMapper.class, // mapper class
+				RecordKey.class, // mapper output key
+				Record.class, // mapper output value
+				job);
+		job.setReducerClass(HComputeReducer.class); // reducer class
+		job.setNumReduceTasks(10);
+		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+
+		boolean b = job.waitForCompletion(true);
+		if (!b) {
+			throw new IOException("error with job!");
+		}
+	}
+
+}

@@ -1,0 +1,43 @@
+package hw4.hcompute;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
+import org.apache.hadoop.mapreduce.Job;
+
+public class HCompute {
+	public static void main(String[] args) {
+		Configuration config = HBaseConfiguration.create();
+		Job job = new Job(config, "ExampleSummaryToFile");
+		job.setJarByClass(HCompute.class); // class that contains mapper and
+											// reducer
+
+		Scan scan = new Scan();
+		scan.setCaching(500); // 1 is the default in Scan, which will be bad for
+								// MapReduce jobs
+		scan.setCacheBlocks(false); // don't set to true for MR jobs
+		// set other scan attrs
+
+		TableMapReduceUtil.initTableMapperJob(sourceTable, // input table
+				scan, // Scan instance to control CF and attribute selection
+				MyMapper.class, // mapper class
+				Text.class, // mapper output key
+				IntWritable.class, // mapper output value
+				job);
+		job.setReducerClass(MyReducer.class); // reducer class
+		job.setNumReduceTasks(10); // at least one, adjust as required
+		FileOutputFormat.setOutputPath(job, new Path("/tmp/mr/mySummaryFile")); // adjust
+																				// directories
+																				// as
+																				// required
+
+		boolean b = job.waitForCompletion(true);
+		if (!b) {
+			throw new IOException("error with job!");
+		}
+	}
+
+}

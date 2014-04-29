@@ -1,0 +1,68 @@
+package hw4;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Writable;
+
+public class Record implements Writable {
+
+	private int flightMonth;
+	private float arrDelayMinSum = 0f;
+	private int arrDelayMinCount = 0;
+
+	public void set(int flightMonth) {
+		this.flightMonth = flightMonth;
+	}
+
+	@Override
+	public void write(DataOutput out) throws IOException {
+		out.writeInt(flightMonth);
+		out.writeFloat(arrDelayMinSum);
+		out.writeInt(arrDelayMinCount);
+	}
+
+	@Override
+	public void readFields(DataInput in) throws IOException {
+		flightMonth = in.readInt();
+		arrDelayMinSum = in.readFloat();
+		arrDelayMinCount = in.readInt();
+	}
+
+	public void add(float arrDelayMin) {
+		arrDelayMinSum = arrDelayMinSum + arrDelayMin;
+		arrDelayMinCount++;
+	}
+
+	public int getFlightMonth() {
+		return flightMonth;
+	}
+
+	public float getArrDelayMinSum() {
+		return arrDelayMinSum;
+	}
+
+	public int getArrDelayMinCount() {
+		return arrDelayMinCount;
+	}
+
+	public String toString() {
+		return String.valueOf(flightMonth).concat(" ")
+				.concat(String.valueOf(arrDelayMinSum)).concat(" ")
+				.concat(String.valueOf(arrDelayMinCount));
+	}
+
+	public boolean equals(Object o) {
+		if (o instanceof Record) {
+			return flightMonth == ((Record) o).flightMonth
+					&& arrDelayMinSum == ((Record) o).arrDelayMinSum
+					&& arrDelayMinCount == ((Record) o).arrDelayMinCount;
+		}
+		return false;
+	}
+
+	public int hashCode() {
+		return flightMonth + (int) arrDelayMinSum + arrDelayMinCount;
+	}
+}

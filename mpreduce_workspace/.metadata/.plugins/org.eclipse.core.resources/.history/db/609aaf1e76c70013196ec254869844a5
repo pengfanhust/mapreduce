@@ -1,0 +1,32 @@
+package util;
+
+import ssspcolormultiple.NodeWthMultipleD;
+
+public class NodeUtil {
+	public static boolean isNodeInfinity(NodeWthMultipleD n)
+	{
+		for (int i : n.distances()) {
+			if (i != MpRdcConstants.INFINITY)
+				return false;
+		}
+		return true;
+	}
+	
+	public static boolean isNodeBlack(NodeWthMultipleD n)
+	{
+		for (int i : n.getColors()) {
+			if (i != MpRdcConstants.BLACK)
+				return false;
+		}
+		return true;
+	}
+	
+	public static boolean isNodeGray(NodeWthMultipleD n)
+	{
+		for (int i : n.getColors()) {
+			if (i != MpRdcConstants.GRAY)
+				return false;
+		}
+		return true;
+	}
+}

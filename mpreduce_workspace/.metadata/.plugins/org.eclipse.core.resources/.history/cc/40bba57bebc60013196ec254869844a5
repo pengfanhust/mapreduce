@@ -1,0 +1,43 @@
+package preprocess;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PreprocessGraphSourceNodes {
+
+	// key is the node id, value is the node position in the src nodes file
+	private Map<Integer, Integer> srcNodes = new HashMap<Integer, Integer>();
+
+	public void process(String srcNodesFile, String graphFile, String outputFile)
+			throws IOException {
+		generateSrcNodeMap(srcNodesFile);
+	}
+
+	private void generateSrcNodeMap(String srcNodesFile) throws IOException {
+		// TODO Auto-generated method stub
+		BufferedReader br = null;
+		try {
+
+		} catch (IOException e) {
+			throw e;
+		} finally {
+			if (br != null) {
+				try {
+					br.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	public static void main(String[] args) {
+		try {
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

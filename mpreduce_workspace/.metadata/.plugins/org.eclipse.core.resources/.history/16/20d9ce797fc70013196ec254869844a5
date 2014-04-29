@@ -1,0 +1,168 @@
+package ssspcolor;
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import sssp.MoreIterations;
+import util.MpRdcConstants;
+
+/**
+ * 67min
+ * 
+ * 40 min
+ * Fri Apr 18 00:21:21 EDT 2014
+ * Fri Apr 18 01:01:29 EDT 2014
+ * 
+ * @author pengfan
+ * 
+ */
+public class SSSPColor {
+	public static class SingleSourceShortestPathMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+		private IntWritable id = new IntWritable();
+		private Text text = new Text();
+
+		private boolean isNodeInValid(NodeColor n) {
+			return n.distance() == MpRdcConstants.INFINITY
+					|| n.getColor() == MpRdcConstants.BLACK;
+		}
+		
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] line = value.toString().split(
+					MpRdcConstants.FIELD_SEPRATOR);
+			id.set(Integer.parseInt(line[0]));
+			if (line.length == 1) {
+				// src node file
+				text.set("0");
+				context.write(id, text);
+			} else {
+				int color;
+				if (line.length == 3) {
+					// initial graph, have no color, we set the
+					// default color white
+					color = MpRdcConstants.WHITE;
+				} else {
+					color = Integer.parseInt(line[3]);
+				}
+				NodeColor n = new NodeColor(line[1], Integer.parseInt(line[2]),
+						color);
+				if (isNodeInValid(n)) {
+					// omit the invalid node
+					// only the source node and the gray node
+					// should emit their adjacent list
+					// emit the node
+					text.set(n.toString());
+					context.write(id, text);
+					return;
+				}
+				
+				// emit the node
+				n.setColor(MpRdcConstants.BLACK);
+				text.set(n.toString());
+				context.write(id, text);
+
+				int distance = n.distance();
+				
+				// emit distance for each node
+				for (Integer adjacentNodeID : n.adjacentList()) {
+					id.set(adjacentNodeID.intValue());
+					text.set(String.valueOf(distance + 1));
+					context.write(id, text);
+				}
+			}
+		}
+	}
+
+	public static class SingleSourceShortestPathReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+
+		private Text text = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			NodeColor n = new NodeColor();
+			int min = MpRdcConstants.INFINITY;
+			int current;
+			for (Text val : values) {
+				String[] content = val.toString().split(
+						MpRdcConstants.FIELD_SEPRATOR);
+				if (isNode(content)) {
+					n = new NodeColor(content[0], Integer.parseInt(content[1]),
+							Integer.parseInt(content[2]));
+					if (n.getColor() != MpRdcConstants.WHITE) {
+						text.set(n.toString());
+						context.write(key, text);
+						return;
+					}
+				} else {
+					current = Integer.parseInt(content[0]);
+					if (current < min) {
+						min = current;
+					}
+				}
+			}
+			if (min < n.distance()) {
+				n.setDistance(min);
+				context.getCounter(MoreIterations.numberOfIterations)
+						.increment(1L);
+				n.setColor(MpRdcConstants.GRAY);
+			}
+			text.set(n.toString());
+			context.write(key, text);
+		}
+
+		private boolean isNode(String[] content) {
+			return content.length > 1;
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Date start = new Date();
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: SingleSourceShortestPath <in> <out>");
+			System.exit(2);
+		}
+		int iterationCount = 0;
+		long terminationValue = 1;
+		while (terminationValue > 0) {
+			Job job = new Job(conf, "SingleSourceShortestPath");
+			job.setJarByClass(SSSPColor.class);
+			job.setMapperClass(SingleSourceShortestPathMapper.class);
+			job.setReducerClass(SingleSourceShortestPathReducer.class);
+			job.setMapOutputKeyClass(IntWritable.class);
+			job.setMapOutputValueClass(Text.class);
+			job.setOutputKeyClass(IntWritable.class);
+			job.setOutputValueClass(Text.class);
+			String inputPath;
+			if (iterationCount == 0) {
+				inputPath = otherArgs[0];
+			} else {
+				inputPath = otherArgs[1] + iterationCount;
+			}
+			iterationCount++;
+			String outputPath = otherArgs[1] + iterationCount;
+			FileInputFormat.addInputPath(job, new Path(inputPath));
+			FileOutputFormat.setOutputPath(job, new Path(outputPath));
+			job.waitForCompletion(true);
+			terminationValue = job.getCounters()
+					.findCounter(MoreIterations.numberOfIterations).getValue();
+		}
+		System.out.println(start);
+		System.out.println(new Date());
+	}
+}

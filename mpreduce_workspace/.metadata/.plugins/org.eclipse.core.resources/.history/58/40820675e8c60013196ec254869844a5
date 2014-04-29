@@ -1,0 +1,32 @@
+package preprocess;
+
+import java.util.HashSet;
+import java.util.Random;
+
+public class RandomSelectSourceNode {
+	private int min;
+	private int max;
+	public RandomSelectSourceNode(int min, int max) {
+		this.min = min;
+		this.max = max;
+	}
+
+	public void random(int requiredNumber) {
+		Random randomGenerator = new Random();
+		HashSet<Integer> result = new HashSet<Integer>();
+		while(true)
+		{
+			int i = randomGenerator.nextInt(max - min + 1) + min;
+		}
+//	    for (int idx = 1; idx <= 10; ++idx){
+//	      int randomInt = randomGenerator.nextInt(100);
+//	      System.out.println("Generated : " + randomInt);
+//	    }
+	}
+	
+	static public void main(String[] args)
+	{
+		RandomSelectSourceNode r = new RandomSelectSourceNode(1, 2);
+		r.random(2);
+	}
+}

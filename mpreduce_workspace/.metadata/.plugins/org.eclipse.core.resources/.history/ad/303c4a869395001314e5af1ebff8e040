@@ -1,0 +1,36 @@
+package hw3;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+
+public class FlightRecord implements Writable {
+
+	// flight delay time
+	private String flightDelayTime;
+	
+	// departure time for l2 or arrive time for l1
+	private String time;
+	
+	// flightType: leg1 or leg2
+	private String flightType;
+
+	// separator
+	private static final String SEP = "dd23dsf";
+	
+	private Text content;
+	
+	@Override
+	public void write(DataOutput out) throws IOException {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public void readFields(DataInput in) throws IOException {
+		// TODO Auto-generated method stub
+		
+	}
+}

@@ -1,0 +1,93 @@
+package hw3;
+
+import java.io.IOException;
+import java.util.StringTokenizer;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.Reducer.Context;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+/**
+ * Between june 2007 and may 2008 Year 0 Month 2
+ * 
+ * FlightDate 5 Origin: ORD 11 Dest: JFK 17 DepTime 24 ArrTime 35
+ * ArrDelayMinutes 37 Cancelled 41 Diverted 43
+ * 
+ * @author pengfan
+ * 
+ */
+public class FlightDelayAvg {
+
+	private static final int INDEX_YEAR = 0;
+	private static final int INDEX_MONTH = 2;
+	private static final int INDEX_FLGHTDATE = 5;
+	private static final int INDEX_ORIGIN = 11;
+	private static final int INDEX_DEST = 17;
+	private static final int INDEX_DEPTIME = 24;
+	private static final int INDEX_ARRTIME = 35;
+	private static final int INDEX_ARR_DEALY_MIN = 37;
+	private static final int INDEX_CANCLELED = 41;
+	private static final int INDEX_DIVERTED = 43;
+
+	private static final int YEAR_MIN = 2007;
+	private static final int MONTH_MIN = 6;
+	private static final int YEAR_MAX = 2008;
+	private static final int MONTH_MAX = 5;
+	private static final String ORIG = "ORD";
+	private static final String DES = "JFK";
+
+	public static class TokenizerMapper extends
+			Mapper<Object, Text, Text, FlightRecord> {
+
+		private final static IntWritable one = new IntWritable(1);
+		private Text word = new Text();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String line = value.toString();
+		}
+	}
+
+	public static class IntSumReducer extends
+			Reducer<Text, IntWritable, Text, IntWritable> {
+		private IntWritable result = new IntWritable();
+
+		public void reduce(Text key, Iterable<IntWritable> values,
+				Context context) throws IOException, InterruptedException {
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			result.set(sum);
+			context.write(key, result);
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		// Configuration conf = new Configuration();
+		// String[] otherArgs = new GenericOptionsParser(conf, args)
+		// .getRemainingArgs();
+		// if (otherArgs.length != 2) {
+		// System.err.println("Usage: wordcount <in> <out>");
+		// System.exit(2);
+		// }
+		// Job job = new Job(conf, "word count");
+		// job.setJarByClass(WordCountAddPrefix.class);
+		// job.setMapperClass(TokenizerMapper.class);
+		// job.setCombinerClass(IntSumReducer.class);
+		// job.setReducerClass(IntSumReducer.class);
+		// job.setOutputKeyClass(Text.class);
+		// job.setOutputValueClass(IntWritable.class);
+		// FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+		// FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+		// System.exit(job.waitForCompletion(true) ? 0 : 1);
+	}
+}

@@ -1,0 +1,50 @@
+package hw3;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+
+public class FlightRecord implements Writable {
+
+	// flightType
+	public static final String FLIGHT_TYPE_L1 = "leg1";
+	public static final String FLIGHT_TYPE_L2 = "leg2";
+
+	// flight delay time
+	private String flightDelayTime;
+
+	// departure time for l2 or arrive time for l1
+	private String flightTime;
+
+	// flightType: leg1 or leg2
+	private String flightType;
+
+	// separator
+	private static final String SEP = "dd23dsf";
+
+	private Text content;
+
+	public FlightRecord(String flightDelayTime, String flightTime,
+			String flightType) {
+		this.flightDelayTime = flightDelayTime;
+		this.flightTime = flightTime;
+		this.flightType = flightType;
+		content = new Text();
+		content.set(flightDelayTime.concat(SEP).concat(flightTime).concat(SEP)
+				.concat(flightType));
+	}
+
+	@Override
+	public void write(DataOutput out) throws IOException {
+		// TODO Auto-generated method stub
+	}
+
+	@Override
+	public void readFields(DataInput in) throws IOException {
+		// TODO Auto-generated method stub
+
+	}
+}

@@ -1,0 +1,7 @@
+package hw3;
+
+public class FlightDelay {
+	public static void main(String []argv) {
+		
+	}
+}

@@ -1,0 +1,6 @@
+package util;
+
+public class Constants {
+	public final String ATTR_SEPRATOR = ",";
+	public final String FIELD_SEPRATOR = "\t";
+}

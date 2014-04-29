@@ -1,0 +1,13 @@
+package preprocess;
+
+public class RandomSelectSourceNode {
+	private int min;
+	private int max;
+	public RandomSelectSourceNode(int min, int max) {
+
+	}
+
+	public void random(int requiredNumber) {
+
+	}
+}

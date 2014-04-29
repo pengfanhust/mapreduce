@@ -1,0 +1,192 @@
+package ssspcolormultiple;
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import sssp.MoreIterations;
+import util.MpRdcConstants;
+import util.NodeUtil;
+import util.StringArrayConvertor;
+
+/**
+ * 67min
+ * 
+ * 40 min Fri Apr 18 00:21:21 EDT 2014 Fri Apr 18 01:01:29 EDT 2014
+ * 
+ * 5 source node 97min
+ * Fri Apr 18 09:10:04 EDT 2014
+ * Fri Apr 18 10:47:29 EDT 2014
+ * @author pengfan
+ * 
+ */
+public class SingleSourceShortestPathMultipleD {
+	public static class SingleSourceShortestPathMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+		private IntWritable id = new IntWritable();
+		private Text text = new Text();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] line = value.toString().split(
+					MpRdcConstants.FIELD_SEPRATOR);
+			id.set(Integer.parseInt(line[0]));
+			NodeWthMultipleD n = new NodeWthMultipleD(line[1],
+					StringArrayConvertor.stringToIntArr(line[2]),
+					StringArrayConvertor.stringToIntArr(line[3]));
+			if (NodeUtil.isNodeBlack(n) || NodeUtil.isNodeInfinity(n)) {
+				// omit the invalid node
+				// only the source node and the gray node
+				// should emit their adjacent list
+				// emit the node
+				text.set(n.toString());
+				context.write(id, text);
+				return;
+			}
+
+			// color the correspond slot
+			int[] colors = n.getColors();
+			int[] distances = n.distances();
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != MpRdcConstants.INFINITY)
+					colors[i] = MpRdcConstants.BLACK;
+			}
+			// emit the node
+			n.setColor(colors);
+			text.set(n.toString());
+			context.write(id, text);
+
+			// calculate distance
+			int[] adjacentDistances = new int[distances.length];
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != MpRdcConstants.INFINITY) {
+					adjacentDistances[i] = distances[i] + 1;
+				} else {
+					adjacentDistances[i] = MpRdcConstants.INFINITY;
+				}
+			}
+
+			// emit distance for each node
+			for (Integer adjacentNodeID : n.adjacentList()) {
+				id.set(adjacentNodeID.intValue());
+				text.set(StringArrayConvertor.intArrToString(adjacentDistances));
+				context.write(id, text);
+			}
+		}
+	}
+
+	public static class SingleSourceShortestPathReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+
+		private Text text = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			NodeWthMultipleD n = null;
+			int[] current = null;
+			for (Text val : values) {
+				String[] content = val.toString().split(
+						MpRdcConstants.FIELD_SEPRATOR);
+				if (isNode(content)) {
+					n = new NodeWthMultipleD(content[0],
+							StringArrayConvertor.stringToIntArr(content[1]),
+							StringArrayConvertor.stringToIntArr(content[2]));
+					if (NodeUtil.isNodeBlack(n) || NodeUtil.isNodeGray(n)) {
+						text.set(n.toString());
+						context.write(key, text);
+						return;
+					}
+				} else {
+					if (current == null) {
+						current = StringArrayConvertor
+								.stringToIntArr(content[0]);
+					} else {
+						current = minArr(current,
+								StringArrayConvertor.stringToIntArr(content[0]));
+					}
+				}
+			}
+			if (n == null)
+				n = new NodeWthMultipleD(current.length);
+			int[] colors = n.getColors();
+			int[] distances = n.distances();
+			if (current != null) {
+				boolean hasChanged = false;
+				for (int i = 0; i < colors.length; i++) {
+					if (current[i] < distances[i]) {
+						distances[i] = current[i];
+						hasChanged = true;
+						colors[i] = NodeWthMultipleD.GRAY;
+					}
+				}
+				if (hasChanged)
+					context.getCounter(MoreIterations.numberOfIterations)
+							.increment(1L);
+				n.setColor(colors);
+				n.setDistance(distances);
+			}
+
+			text.set(n.toString());
+			context.write(key, text);
+		}
+
+		private int[] minArr(int[] arr1, int[] arr2) {
+			for (int i = 0; i < arr1.length; i++) {
+				arr1[i] = Math.min(arr1[i], arr2[i]);
+			}
+			return arr1;
+		}
+
+		private boolean isNode(String[] content) {
+			return content.length > 1;
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Date start = new Date();
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: SingleSourceShortestPath <in> <out>");
+			System.exit(2);
+		}
+		int iterationCount = 0;
+		long terminationValue = 1;
+		while (terminationValue > 0) {
+			Job job = new Job(conf, "SingleSourceShortestPath");
+			job.setJarByClass(SingleSourceShortestPathMultipleD.class);
+			job.setMapperClass(SingleSourceShortestPathMapper.class);
+			job.setReducerClass(SingleSourceShortestPathReducer.class);
+			job.setMapOutputKeyClass(IntWritable.class);
+			job.setMapOutputValueClass(Text.class);
+			job.setOutputKeyClass(IntWritable.class);
+			job.setOutputValueClass(Text.class);
+			String inputPath;
+			if (iterationCount == 0) {
+				inputPath = otherArgs[0];
+			} else {
+				inputPath = otherArgs[1] + iterationCount;
+			}
+			iterationCount++;
+			String outputPath = otherArgs[1] + iterationCount;
+			FileInputFormat.addInputPath(job, new Path(inputPath));
+			FileOutputFormat.setOutputPath(job, new Path(outputPath));
+			job.waitForCompletion(true);
+			terminationValue = job.getCounters()
+					.findCounter(MoreIterations.numberOfIterations).getValue();
+		}
+		System.out.println(start);
+		System.out.println(new Date());
+	}
+}

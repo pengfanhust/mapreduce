@@ -1,0 +1,74 @@
+package ssspcolormultiple;
+
+import java.util.LinkedList;
+import java.util.List;
+
+import util.MpRdcFinalConstants;
+
+public class NodeColor {
+	public static final int BLACK = -1;
+	public static final int WHITE = -2;
+	public static final int GRAY = -3;
+
+	private int[] distances;
+	private List<Integer> adjacentList = new LinkedList<Integer>();
+	private int[] colors;
+
+	public NodeColor(int size) {
+		distances = new int[size];
+		colors = new int[size];
+		for (int i = 0; i < size; i++) {
+			distances[i] = Integer.MAX_VALUE;
+			colors[i] = WHITE;
+		}
+	}
+
+	public NodeColor(String adjacentList, int[] distance, int[] color) {
+		if (!adjacentList.equals("")) {
+			String[] adjacentListStr = adjacentList
+					.split(MpRdcFinalConstants.ATTR_SEPRATOR);
+			for (String id : adjacentListStr) {
+				this.adjacentList.add(Integer.parseInt(id));
+			}
+		}
+		this.distances = distance;
+		this.colors = color;
+	}
+
+	public List<Integer> adjacentList() {
+		return adjacentList;
+	}
+
+	public int[] distances() {
+		return distances;
+	}
+
+	public void setDistance(int[] distances) {
+		this.distances = distances;
+	}
+
+	public void setColor(int[] colors) {
+		this.colors = colors;
+	}
+
+	public int[] getColors() {
+		return colors;
+	}
+
+	public String toString() {
+		StringBuilder sb = new StringBuilder();
+		for (Integer id : adjacentList) {
+			sb.append(id.toString()).append(MpRdcFinalConstants.ATTR_SEPRATOR);
+		}
+		if (sb.length() > 1) {
+			sb.deleteCharAt(sb.length() - 1);
+		}
+		sb.append(MpRdcFinalConstants.FIELD_SEPRATOR)
+				.append(StringConvertor.intArrToString(distances))
+				.append(MpRdcFinalConstants.FIELD_SEPRATOR)
+				.append(StringConvertor.intArrToString(colors));
+
+		return sb.toString();
+	}
+
+}
