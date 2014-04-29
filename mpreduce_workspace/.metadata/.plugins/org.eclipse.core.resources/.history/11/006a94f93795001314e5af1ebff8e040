@@ -1,0 +1,9 @@
+package hw3;
+
+public class FlightRecord {
+	// flight delay time
+	
+	// deptime
+	
+	// arrivetime
+}

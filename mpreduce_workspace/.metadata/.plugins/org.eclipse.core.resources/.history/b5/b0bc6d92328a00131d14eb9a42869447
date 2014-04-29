@@ -1,0 +1,7 @@
+package hadoop.wordcount.partitioner;
+
+import org.apache.hadoop.mapreduce.Partitioner;
+
+public class MyPartitioner extends Partitioner<KEY, VALUE> {
+
+}

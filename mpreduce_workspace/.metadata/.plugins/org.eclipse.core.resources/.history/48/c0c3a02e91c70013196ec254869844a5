@@ -1,0 +1,127 @@
+package ssspcolormultiple;
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import util.MoreIterations;
+import util.MpRdcConstants;
+import util.NodeUtil;
+import util.StringArrayConvertor;
+
+/**
+ * 67min
+ * 
+ * 40 min Fri Apr 18 00:21:21 EDT 2014 Fri Apr 18 01:01:29 EDT 2014
+ * 
+ * 5 source node 97min
+ * Fri Apr 18 09:10:04 EDT 2014
+ * Fri Apr 18 10:47:29 EDT 2014
+ * @author pengfan
+ * 
+ */
+public class SSSPColorMultiple {
+	
+	/**
+	 * A mapper, the mapper will emit all the node object
+	 * and the adjacent node's distance if current node is
+	 * gray(gray means a frontier node) or source node.
+	 * @author pengfan
+	 *
+	 */
+	public static class SingleSourceShortestPathMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+		private IntWritable id = new IntWritable();
+		private Text text = new Text();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] line = value.toString().split(
+					MpRdcConstants.FIELD_SEPRATOR);
+			id.set(Integer.parseInt(line[0]));
+			NodeColorMultiple n = new NodeColorMultiple(line[1],
+					StringArrayConvertor.stringToIntArr(line[2]),
+					StringArrayConvertor.stringToIntArr(line[3]));
+			if (NodeUtil.isNodeBlack(n) || NodeUtil.isNodeInfinity(n)) {
+				// The infinity node wont shrink the distance for
+				// it's adjacent node, The black node have already
+				// shrink it's adjacent node's distance, so we omit the infinity
+				// node and the black node.
+				// only the source node and the gray node
+				// should emit their adjacent list
+				// emit the node
+				text.set(n.toString());
+				context.write(id, text);
+				return;
+			}
+
+			// color the correspond slot
+			int[] colors = n.getColors();
+			int[] distances = n.distances();
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != MpRdcConstants.INFINITY)
+					// the distance is not infinity, it means
+					// the node is src node or it's has already been
+					// visited, because in map task, we will visited all
+					// it's successor, so the current node color should
+					// be set to black.
+					colors[i] = MpRdcConstants.BLACK;
+			}
+			// emit the node
+			n.setColor(colors);
+			text.set(n.toString());
+			context.write(id, text);
+
+			// calculate distance
+			int[] adjacentDistances = new int[distances.length];
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != MpRdcConstants.INFINITY) {
+					adjacentDistances[i] = distances[i] + 1;
+				} else {
+					adjacentDistances[i] = MpRdcConstants.INFINITY;
+				}
+			}
+
+			// emit distance for its adjacent nodes
+			for (Integer adjacentNodeID : n.adjacentList()) {
+				id.set(adjacentNodeID.intValue());
+				text.set(StringArrayConvertor.intArrToString(adjacentDistances));
+				context.write(id, text);
+			}
+		}
+	}
+
+	/**
+	 * the reducer will calculate the shortest distance
+	 * from the values, if the distance has shrinked, it
+	 * means the current node has been visited first time,
+	 * it's the frontier node, it will be colord to gray
+	 * @author pengfan
+	 *
+	 */
+	public static class SingleSourceShortestPathReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+
+		private Text text = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			NodeColorMultiple n = null;
+			int[] current = null;
+			for (Text val : values) {
+				String[] content = val.toString().split(
+						MpRdcConstants.FIELD_SEPRATOR);
+				if (isNode(content)) {
+					// found the node object, recover it
+					n = new NodeColorMultiple(content[0],
+							StringArrayConvertor.stringToIntArr(con

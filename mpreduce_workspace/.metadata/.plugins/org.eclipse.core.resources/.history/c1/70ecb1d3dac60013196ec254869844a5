@@ -1,0 +1,181 @@
+package ssspcolormultiple;
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import sssp.MoreIterations;
+import util.MpRdcFinalConstants;
+import util.NodeUtil;
+import util.StringConvertor;
+
+/**
+ * 67min
+ * 
+ * 40 min Fri Apr 18 00:21:21 EDT 2014 Fri Apr 18 01:01:29 EDT 2014
+ * 
+ * @author pengfan
+ * 
+ */
+public class SingleSourceShortestPathColor {
+	public static class SingleSourceShortestPathMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+		private IntWritable id = new IntWritable();
+		private Text text = new Text();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] line = value.toString().split(
+					MpRdcFinalConstants.FIELD_SEPRATOR);
+			id.set(Integer.parseInt(line[0]));
+			NodeColor n = new NodeColor(line[1],
+					StringConvertor.stringToIntArr(line[2]),
+					StringConvertor.stringToIntArr(line[3]));
+			if (NodeUtil.isNodeBlack(n) || NodeUtil.isNodeInfinity(n)) {
+				// omit the invalid node
+				// only the source node and the gray node
+				// should emit their adjacent list
+				// emit the node
+				text.set(n.toString());
+				context.write(id, text);
+				return;
+			}
+
+			// color the correspond slot
+			int[] colors = n.getColors();
+			int[] distances = n.distances();
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != Integer.MAX_VALUE)
+					colors[i] = NodeColor.BLACK;
+			}
+			// emit the node
+			n.setColor(colors);
+			text.set(n.toString());
+			context.write(id, text);
+
+			// calculate distance
+			int[] adjacentDistances = new int[distances.length];
+			for (int i = 0; i < distances.length; i++) {
+				if (distances[i] != Integer.MAX_VALUE) {
+					adjacentDistances[i] = distances[i] + 1;
+				} else {
+					adjacentDistances[i] = Integer.MAX_VALUE;
+				}
+			}
+
+			// emit distance for each node
+			for (Integer adjacentNodeID : n.adjacentList()) {
+				id.set(adjacentNodeID.intValue());
+				text.set(StringConvertor.intArrToString(adjacentDistances));
+				context.write(id, text);
+			}
+		}
+	}
+
+	public static class SingleSourceShortestPathReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+
+		private Text text = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			NodeColor n = null;
+			int srcNodeNum = -1;
+			int min = Integer.MAX_VALUE;
+			int[] current = null;
+			for (Text val : values) {
+				String[] content = val.toString().split(
+						MpRdcFinalConstants.FIELD_SEPRATOR);
+				if (isNode(content)) {
+					n = new NodeColor(content[0],
+							StringConvertor.stringToIntArr(content[1]),
+							StringConvertor.stringToIntArr(content[2]));
+					if (NodeUtil.isNodeBlack(n) || NodeUtil.isNodeGray(n)) {
+						text.set(n.toString());
+						context.write(key, text);
+						return;
+					}
+				} else {
+					if (current == null) {
+						current = StringConvertor.stringToIntArr(content[0]);
+					} else {
+						current = minArr(current,
+								StringConvertor.stringToIntArr(content[0]));
+					}
+
+					// current = Integer.parseInt(content[0]);
+					// if (current < min) {
+					// min = current;
+					// }
+				}
+			}
+			if (min < n.distance()) {
+				n.setDistance(min);
+				context.getCounter(MoreIterations.numberOfIterations)
+						.increment(1L);
+				n.setColor(NodeColor.GRAY);
+			}
+			text.set(n.toString());
+			context.write(key, text);
+		}
+
+		private int[] minArr(int[] arr1, int[] arr2) {
+			for (int i = 0; i < arr1.length; i++) {
+				arr1[i] = Math.min(arr1[i], arr2[i]);
+			}
+			return arr1;
+		}
+
+		private boolean isNode(String[] content) {
+			return content.length > 1;
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Date start = new Date();
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: SingleSourceShortestPath <in> <out>");
+			System.exit(2);
+		}
+		int iterationCount = 0;
+		long terminationValue = 1;
+		while (terminationValue > 0) {
+			Job job = new Job(conf, "SingleSourceShortestPath");
+			job.setJarByClass(SingleSourceShortestPathColor.class);
+			job.setMapperClass(SingleSourceShortestPathMapper.class);
+			job.setReducerClass(SingleSourceShortestPathReducer.class);
+			job.setMapOutputKeyClass(IntWritable.class);
+			job.setMapOutputValueClass(Text.class);
+			job.setOutputKeyClass(IntWritable.class);
+			job.setOutputValueClass(Text.class);
+			String inputPath;
+			if (iterationCount == 0) {
+				inputPath = otherArgs[0];
+			} else {
+				inputPath = otherArgs[1] + iterationCount;
+			}
+			iterationCount++;
+			String outputPath = otherArgs[1] + iterationCount;
+			FileInputFormat.addInputPath(job, new Path(inputPath));
+			FileOutputFormat.setOutputPath(job, new Path(outputPath));
+			job.waitForCompletion(true);
+			terminationValue = job.getCounters()
+					.findCounter(MoreIterations.numberOfIterations).getValue();
+		}
+		System.out.println(start);
+		System.out.println(new Date());
+	}
+}

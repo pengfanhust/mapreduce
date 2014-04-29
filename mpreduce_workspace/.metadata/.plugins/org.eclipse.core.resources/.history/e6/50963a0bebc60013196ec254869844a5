@@ -1,0 +1,16 @@
+package preprocess;
+
+public class PreprocessGraphSourceNodes {
+
+	public void process(String srcNodesFile, String graphFile, String outputFile) {
+
+	}
+
+	public static void main(String[] args) {
+		try {
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}

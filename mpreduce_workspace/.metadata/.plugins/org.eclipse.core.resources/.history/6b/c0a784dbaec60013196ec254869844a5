@@ -1,0 +1,38 @@
+package util;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class FileComparator {
+	
+	public static void main(String[] args)
+	{
+		try
+		{
+			String file1 = "";
+			String file2 = "";
+			FileComparator.compare(file1, file2);
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	private static void compare(String file1, String file2) {
+		BufferedReader br1 = null;
+		BufferedReader br2 = null;
+		try
+		{
+			br1 = new BufferedReader(new FileReader(file1));
+			br2 = new BufferedReader(new FileReader(file2));
+		}
+		catch (IOException e)
+		{
+			throw e;
+		}
+		
+		
+	}
+}

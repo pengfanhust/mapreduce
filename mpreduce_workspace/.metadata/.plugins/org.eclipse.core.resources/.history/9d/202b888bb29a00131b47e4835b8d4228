@@ -1,0 +1,56 @@
+package hw4;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+
+public class FlightRecord implements Writable {
+
+	private int flightMonth;
+	private int arrDelayMin;
+
+	public FlightRecord(int flightMonth, int arrDelayMin) {
+		this.flightMonth = flightMonth;
+		this.arrDelayMin = arrDelayMin;
+	}
+
+	@Override
+	public void write(DataOutput out) throws IOException {
+		out.writeInt(flightMonth);
+		out.writeInt(arrDelayMin);
+	}
+
+	@Override
+	public void readFields(DataInput in) throws IOException {
+		flightMonth = in.readInt();
+		arrDelayMin = in.readInt();
+	}
+
+	public int getFlightMonth() {
+		return flightMonth;
+	}
+
+	public int getArrDelayMin() {
+		return arrDelayMin;
+	}
+
+	public String toString() {
+		return String.valueOf(flightMonth).concat(" ")
+				.concat(String.valueOf(arrDelayMin));
+	}
+
+	public boolean equals(Object o) {
+		if (o instanceof Record) {
+			return flightMonth == ((Record) o).flightMonth
+					&& arrDelayMin == ((Record) o).arrDelayMin;
+		}
+		return false;
+	}
+
+	public int hashCode() {
+		return flightMonth + arrDelayMin;
+	}
+}

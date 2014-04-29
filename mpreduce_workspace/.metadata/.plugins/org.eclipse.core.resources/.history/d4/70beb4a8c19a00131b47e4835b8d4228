@@ -1,0 +1,92 @@
+package hw4;
+
+import java.io.IOException;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import au.com.bytecode.opencsv.CSVParser;
+
+public class AverageDelay {
+
+	private static final int INDEX_YEAR = 0;
+	private static final int INDEX_MONTH = 2;
+	private static final int INDEX_AIR_LINE = 6;
+	private static final int INDEX_ARR_DEALY_MIN = 37;
+	private static final int INDEX_CANCELLED = 41;
+	private static final int INDEX_DIVERTED = 43;
+	private static final String YEAR = "2008";
+	private static final CSVParser csvParser = new CSVParser();
+
+	public static class AverageDelayMapper extends
+			Mapper<Object, Text, RecordKey, Record> {
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] line = csvParser.parseLine(value.toString());
+			// head line
+			if (line[0].equals("Year"))
+				return;
+
+			// year is not be 2008
+			if (!line[INDEX_YEAR].equals(YEAR))
+				return;
+
+			// has be cancelled or diverted
+			if (!(line[INDEX_CANCELLED].equals("0.00") && line[INDEX_DIVERTED]
+					.equals("0.00")))
+				return;
+			RecordKey k = new RecordKey(line[INDEX_AIR_LINE],
+					Integer.parseInt(line[INDEX_MONTH]));
+			Record v = new Record(Integer.parseInt(line[INDEX_MONTH]),
+					Integer.parseInt(line[INDEX_ARR_DEALY_MIN]));
+			context.write(k, v);
+		}
+	}
+
+	public static class FlightDelayFilterReducer extends
+			Reducer<RecordKey, Record, Text, Text> {
+		public void reduce(RecordKey key, Iterable<Record> values,
+				Context context) throws IOException, InterruptedException {
+			
+			for (Record r : values) {
+
+			}
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Configuration confFilter = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(confFilter, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: flight delay avg <in> <out>");
+			System.exit(2);
+		}
+
+		// filter all the valid leg1-leg2 pair and calculate the
+		// delay time for each pair.
+		Job jobFilter = new Job(confFilter, "flight delay filter");
+		jobFilter.setJarByClass(AverageDelay.class);
+		jobFilter.setMapperClass(AverageDelayMapper.class);
+		jobFilter.setReducerClass(FlightDelayFilterReducer.class);
+
+		jobFilter.setMapOutputKeyClass(RecordKey.class);
+		jobFilter.setMapOutputValueClass(Record.class);
+
+		jobFilter.setOutputKeyClass(Text.class);
+		jobFilter.setOutputValueClass(Text.class);
+
+		jobFilter.setGroupingComparatorClass(GroupingComparator.class);
+		jobFilter.setNumReduceTasks(10);
+		FileInputFormat.addInputPath(jobFilter, new Path(otherArgs[0]));
+		FileOutputFormat.setOutputPath(jobFilter, new Path(otherArgs[1]));
+		jobFilter.waitForCompletion(true);
+	}
+}

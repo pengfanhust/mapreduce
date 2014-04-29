@@ -1,0 +1,17 @@
+package hw4;
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class AverageDelay {
+
+	public static class AverageDelayMapper extends
+			Mapper<Object, Text, RecordKey, Record> {
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+		}
+	}
+
+}

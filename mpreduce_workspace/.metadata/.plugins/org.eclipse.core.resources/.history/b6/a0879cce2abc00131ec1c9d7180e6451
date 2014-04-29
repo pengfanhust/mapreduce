@@ -1,0 +1,9 @@
+package sssp;
+
+import java.util.LinkedList;
+import java.util.List;
+
+public class Node {
+	private int distance;
+	private List<Integer> adjacentList = new LinkedList<Integer>();
+}

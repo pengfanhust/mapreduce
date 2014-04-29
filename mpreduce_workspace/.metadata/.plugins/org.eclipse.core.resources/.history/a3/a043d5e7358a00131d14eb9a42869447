@@ -1,0 +1,13 @@
+package hadoop.wordcount.partitioner;
+
+import org.apache.hadoop.mapreduce.Partitioner;
+import org.apache.hadoop.io.Text;
+
+public class MyPartitioner <VALUE> extends Partitioner<Text, VALUE> {
+
+	@Override
+	public int getPartition(Text key, VALUE value, int numPartitions) {
+		return 0;
+	}
+
+}

@@ -1,0 +1,17 @@
+package util;
+
+public class StringConvertor {
+
+	public static String intArrToString(int[] arr) {
+		StringBuilder sb = new StringBuilder();
+		for (int i : arr) {
+
+			sb.append(i).append(MpRdcFinalConstants.ATTR_SEPRATOR);
+		}
+		if (sb.length() > 1) {
+			sb.deleteCharAt(sb.length() - 1);
+		}
+
+		return sb.toString();
+	}
+}

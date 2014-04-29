@@ -1,0 +1,10 @@
+package util;
+
+/**
+ * golbal hadoop counter
+ * @author pengfan
+ *
+ */
+public enum MoreIterations {
+	numberOfIterations
+}

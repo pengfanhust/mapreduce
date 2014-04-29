@@ -1,0 +1,73 @@
+
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+
+public class FileComparator {
+
+	public static void main(String[] args) {
+		try {
+			String file1 = "/home/pengfan/cs6240_mapreduce/final/Twitter-dataset-sample/edge5ssspoutput10/part-r-00000";
+			String file2 = "/home/pengfan/cs6240_mapreduce/final/Twitter-dataset-sample/edge1ssspoutput8/part-r-00000";
+			System.out.println(FileComparator.compare(file1, file2));
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static boolean compareLine(String line1, String line2) {
+		if (line1 != null && line2 != null) {
+			String[] line1s = line1.split(MpRdcConstants.FIELD_SEPRATOR);
+			String[] line2s = line2.split(MpRdcConstants.FIELD_SEPRATOR);
+			// int l1 = line1s.length, l2 = line2s.length;
+			// if (l1 > l2) {
+			// return line1s[l1 - 2].equals(line2s[l2 - 1]);
+			// } else {
+			// return line1s[l1 - 1].equals(line2s[l2 - 2]);
+			// }
+			return line1s[2].split(MpRdcConstants.ATTR_SEPRATOR)[0]
+					.equals(line2s[2].split(MpRdcConstants.ATTR_SEPRATOR)[0]);
+		}
+		return false;
+	}
+
+	private static boolean compare(String file1, String file2)
+			throws IOException {
+		BufferedReader br1 = null;
+		BufferedReader br2 = null;
+		try {
+			br1 = new BufferedReader(new FileReader(file1));
+			br2 = new BufferedReader(new FileReader(file2));
+			String line1 = null;
+			String line2 = null;
+			while (true) {
+				line1 = br1.readLine();
+				line2 = br2.readLine();
+				if (line1 == null && line2 == null)
+					return true;
+				if (!compareLine(line1, line2))
+					return false;
+			}
+
+		} catch (IOException e) {
+			throw e;
+		} finally {
+			if (br1 != null) {
+				try {
+					br1.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			if (br2 != null) {
+				try {
+					br2.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+
+	}
+}

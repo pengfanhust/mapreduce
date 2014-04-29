@@ -1,0 +1,76 @@
+/**
+ */
+
+package preprocess;
+
+import java.io.IOException;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+public class PreprocessGraphWithCombiner {
+
+	public static class PreprocessGraphWithCombinerMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+
+		private IntWritable followerID = new IntWritable();
+		private IntWritable id = new IntWritable();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] lines = value.toString().split(",");
+			followerID.set(Integer.parseInt(lines[0]));
+			id.set(Integer.parseInt(lines[1]));
+			
+			context.write(followerID, id);
+		}
+	}
+
+	public static class PreprocessGraphWithCombinerReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+		private Text ajacentList = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values, Context context)
+				throws IOException, InterruptedException {
+			StringBuilder ajacentListstr = new StringBuilder();
+			for (IntWritable val : values) {
+			    ajacentListstr.append(val.toString()).append(";");
+			}
+			ajacentList.set(ajacentListstr.toString());
+			context.write(key, ajacentList);
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Date start = new Date();
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: PreprocessGraphWithCombiner <in> <out>");
+			System.exit(2);
+		}
+		Job job = new Job(conf, "PreprocessGraphWithCombiner");
+		job.setJarByClass(PreprocessGraph.class);
+		job.setMapperClass(PreprocessGraphWithCombinerMapper.class);
+		job.setReducerClass(PreprocessGraphWithCombinerReducer.class);
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		job.setOutputKeyClass(IntWritable.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+		job.waitForCompletion(true);
+		System.out.println(start);
+		System.out.println(new Date());
+	}
+}

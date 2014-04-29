@@ -1,0 +1,7 @@
+package util;
+
+public class MpRdcConstants {
+	public static final String ATTR_SEPRATOR = ",";
+	public static final String FIELD_SEPRATOR = "\t";
+	public static final int INFINITY = 99; 
+}

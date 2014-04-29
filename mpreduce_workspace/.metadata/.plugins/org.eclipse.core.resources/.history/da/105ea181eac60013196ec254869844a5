@@ -1,0 +1,126 @@
+/**
+ * 14/04/04 10:44:53 INFO mapred.JobClient: Counters: 20
+14/04/04 10:44:53 INFO mapred.JobClient:   File Output Format Counters 
+14/04/04 10:44:53 INFO mapred.JobClient:     Bytes Written=694579942
+14/04/04 10:44:53 INFO mapred.JobClient:   FileSystemCounters
+14/04/04 10:44:53 INFO mapred.JobClient:     FILE_BYTES_READ=31733199155
+14/04/04 10:44:53 INFO mapred.JobClient:     FILE_BYTES_WRITTEN=17222639335
+14/04/04 10:44:53 INFO mapred.JobClient:   File Input Format Counters 
+14/04/04 10:44:53 INFO mapred.JobClient:     Bytes Read=1319441569
+14/04/04 10:44:53 INFO mapred.JobClient:   Map-Reduce Framework
+14/04/04 10:44:53 INFO mapred.JobClient:     Map output materialized bytes=682802931
+14/04/04 10:44:53 INFO mapred.JobClient:     Map input records=85331845
+14/04/04 10:44:53 INFO mapred.JobClient:     Reduce shuffle bytes=0
+14/04/04 10:44:53 INFO mapred.JobClient:     Spilled Records=28740695
+14/04/04 10:44:53 INFO mapred.JobClient:     Map output bytes=664629939
+14/04/04 10:44:53 INFO mapred.JobClient:     Total committed heap usage (bytes)=14132318208
+14/04/04 10:44:53 INFO mapred.JobClient:     CPU time spent (ms)=0
+14/04/04 10:44:53 INFO mapred.JobClient:     SPLIT_RAW_BYTES=5760
+14/04/04 10:44:53 INFO mapred.JobClient:     Combine input records=0
+14/04/04 10:44:53 INFO mapred.JobClient:     Reduce input records=8768456
+14/04/04 10:44:53 INFO mapred.JobClient:     Reduce input groups=8768419
+14/04/04 10:44:53 INFO mapred.JobClient:     Combine output records=0
+14/04/04 10:44:53 INFO mapred.JobClient:     Physical memory (bytes) snapshot=0
+14/04/04 10:44:53 INFO mapred.JobClient:     Reduce output records=8768419
+14/04/04 10:44:53 INFO mapred.JobClient:     Virtual memory (bytes) snapshot=0
+14/04/04 10:44:53 INFO mapred.JobClient:     Map output records=8768456
+Fri Apr 04 10:40:43 PDT 2014
+Fri Apr 04 10:44:53 PDT 2014
+ */
+
+package preprocess;
+
+import java.io.IOException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.GenericOptionsParser;
+
+import util.MpRdcFinalConstants;
+
+public class PreprocessGraphWithCombiner {
+
+	public static class PreprocessGraphWithCombinerMapper extends
+			Mapper<Object, Text, IntWritable, Text> {
+
+		private IntWritable id = new IntWritable();
+		private Text text = new Text();
+		private HashMap<IntWritable, StringBuilder> buf = new HashMap<IntWritable, StringBuilder>();
+
+		public void map(Object key, Text value, Context context)
+				throws IOException, InterruptedException {
+			String[] lines = value.toString().split(",");
+			id.set(Integer.parseInt(lines[1]));
+			IntWritable followerID = new IntWritable(Integer.parseInt(lines[0]));
+			StringBuilder sb = buf.get(followerID);
+			if (sb == null) {
+				sb = new StringBuilder();
+				buf.put(followerID, sb);
+			}
+			sb.append(id.toString()).append(MpRdcFinalConstants.ATTR_SEPRATOR);
+		}
+
+		public void cleanup(Context context) throws IOException,
+				InterruptedException {
+			for (Map.Entry<IntWritable, StringBuilder> e : buf.entrySet()) {
+				text.set(e.getValue().toString());
+				context.write(e.getKey(), text);
+			}
+		}
+	}
+
+	public static class PreprocessGraphWithCombinerReducer extends
+			Reducer<IntWritable, Text, IntWritable, Text> {
+		private Text adjacentList = new Text();
+
+		public void reduce(IntWritable key, Iterable<Text> values,
+				Context context) throws IOException, InterruptedException {
+			StringBuilder ajacentListstr = new StringBuilder();
+			for (Text val : values) {
+				ajacentListstr.append(val.toString());
+			}
+			// remove the last separator
+			ajacentListstr.deleteCharAt(ajacentListstr.length() - 1);
+
+			// the initial distance is infinity
+			ajacentListstr.append(MpRdcFinalConstants.FIELD_SEPRATOR).append(
+					Integer.MAX_VALUE);
+			adjacentList.set(ajacentListstr.toString());
+			context.write(key, adjacentList);
+		}
+	}
+
+	public static void main(String[] args) throws Exception {
+		Date start = new Date();
+		Configuration conf = new Configuration();
+		String[] otherArgs = new GenericOptionsParser(conf, args)
+				.getRemainingArgs();
+		if (otherArgs.length != 2) {
+			System.err.println("Usage: PreprocessGraphWithCombiner <in> <out>");
+			System.exit(2);
+		}
+		Job job = new Job(conf, "PreprocessGraphWithCombiner");
+		job.setJarByClass(PreprocessGraphWithCombiner.class);
+		job.setMapperClass(PreprocessGraphWithCombinerMapper.class);
+		job.setReducerClass(PreprocessGraphWithCombinerReducer.class);
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setOutputKeyClass(IntWritable.class);
+		job.setOutputValueClass(Text.class);
+		FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
+		FileOutputFormat.setOutputPath(job, new Path(otherArgs[1]));
+		job.waitForCompletion(true);
+		System.out.println(start);
+		System.out.println(new Date());
+	}
+}
