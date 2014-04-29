@@ -1,6 +1,0 @@
-package util;
-
-public class MpRdcFinalConstants {
-	public static final String ATTR_SEPRATOR = ",";
-	public static final String FIELD_SEPRATOR = "\t";
-}

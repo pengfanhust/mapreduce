@@ -1,3 +1,0 @@
-INDEX VERSION 1.126+/home/pengfan/cs6240_mapreduce/mpreduce_workspace/.metadata/.plugins/org.eclipse.jdt.core
-1943175978.index
-2593881899.index

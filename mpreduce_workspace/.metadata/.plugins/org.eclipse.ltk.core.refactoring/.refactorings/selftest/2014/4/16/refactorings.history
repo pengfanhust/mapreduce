@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<session version="1.0">
-<refactoring comment="Move 2 elements to &apos;selftest/src/util&apos;&#x0A;- Original project: &apos;selftest&apos;&#x0A;- Destination element: &apos;selftest/src/util&apos;&#x0A;- Original elements:&#x0A;     FileComparator.java&#x0A;     MpRdcConstants.java&#x0A;- Update references to refactored element" description="Move compilation units" destination="/src&lt;util" element1="/src&lt;{FileComparator.java" element2="/src&lt;{MpRdcConstants.java" files="0" flags="589830" folders="0" id="org.eclipse.jdt.ui.move" policy="org.eclipse.jdt.ui.moveResources" qualified="false" references="true" stamp="1397891972982" units="2" version="1.0"/>
-</session>

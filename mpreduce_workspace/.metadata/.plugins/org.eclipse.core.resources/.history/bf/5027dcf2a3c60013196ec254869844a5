@@ -1,5 +1,0 @@
-package ssspcolor;
-
-public enum MoreIterations {
-	numberOfIterations
-}
